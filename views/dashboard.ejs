@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        h1 { text-align: center; }
+        
+        /* Centering the Add Button */
+        .header-actions { 
+            text-align: center; 
+            margin-bottom: 20px;
+         }
+        .btn-add { 
+            background-color: #4CAF50; 
+            color: white; padding: 10px 20px; 
+            border: none; border-radius: 4px; 
+            cursor: pointer; font-size: 16px; 
+        }
+        .btn-add:hover { 
+            background-color: #45a049; 
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        th, td { 
+            border: 1px solid black; 
+            padding: 10px; 
+            text-align: left; 
+        }
+        th { 
+            background-color: #f2f2f2; 
+        }
+        .btn-upd { 
+            color: white; 
+            cursor: pointer; 
+            background-color: blue; 
+            border: none; 
+            padding: 5px 10px; 
+            border-radius: 4px;
+        }
+        .btn-del { 
+            color: red; 
+            cursor: pointer; 
+            margin-left: 10px; 
+            border: none; 
+            background: none; 
+        }
+
+        /* Modal Styles */
+        .modal {
+             display: none; 
+             position: fixed; z-index: 1; 
+             left: 0; top: 0; 
+             width: 100%; 
+             height: 100%; 
+             background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content { 
+            background-color: white; 
+            margin: 10% auto; 
+            padding: 20px; 
+            border-radius: 8px;
+            width: 300px; 
+        }
+        .modal-content h3 {
+             margin-top: 0; 
+        }
+        .modal-content input {
+             width: 90%; 
+             margin-bottom: 10px; 
+             padding: 8px; 
+             display: block; 
+        }
+        .modal-actions {
+             display: flex; 
+             justify-content: space-between;
+            margin-top: 15px; 
+        }
+        .save-btn { 
+            background: green; 
+            color: white; 
+            border: none; 
+            padding: 8px 15px; 
+            cursor: pointer; 
+            border-radius: 4px; 
+        }
+
+        .cancel-btn { 
+            background: grey; 
+            color: white; 
+            border: none; padding: 8px 15px; 
+            cursor: pointer; 
+            border-radius: 4px; 
+        }
+    </style>
+</head>
+<body>
+    
+    <h1>Students List</h1>
+
+    <!-- Centered Add Student Button -->
+    <div class="header-actions">
+        <button class="btn-add" onclick="openAddModal()"> Add New Student</button>
+    </div>
+
+    <table id="studentTable">
+        <thead>
+          <tr>
+            <th>Student Name</th>
+            <th>Age</th>
+            <th>Roll No</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Address</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="studentTableBody">
+            <!-- Table rows injected by JS -->
+        </tbody>
+    </table>
+
+    <!-- Student Form Modal (Used for both Add and Update) -->
+    <div id="studentModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Add Student</h3>
+            <input type="hidden" id="studentId">
+            <input type="text" id="studentName" placeholder="Name">
+            <input type="number" id="studentAge" placeholder="Age">
+            <input type="text" id="studentRoll" placeholder="Roll No">
+            <input type="text" id="studentPhone" placeholder="Phone">
+            <input type="email" id="studentEmail" placeholder="Email">
+            <input type="text" id="studentAddress" placeholder="Address">
+            <div class="modal-actions">
+                <button class="save-btn" onclick="handleSave()">Save</button>
+                <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:5000/students';
+
+        // 1. GET: Fetch Students List
+        async function fetchStudentData() {
+            try {
+                const response = await fetch(`${BASE_URL}/students-list`);
+                const data = await response.json();
+                const tableBody = document.getElementById('studentTableBody');
+                tableBody.innerHTML = ''; 
+
+                data.students.forEach(student => {
+                    const row = `
+                        <tr>
+                            <td>${student.name}</td>
+                            <td>${student.age}</td>
+                            <td>${student.rollNo}</td>
+                            <td>${student.phone}</td>
+                            <td>${student.email}</td>
+                            <td>${student.address}</td>
+                            <td>
+                                <button class="btn-upd" onclick='openEditModal(${JSON.stringify(student)})'>Update</button>
+                                <button class="btn-del" onclick="deleteStudent('${student._id}')">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+            } catch (err) { console.error("Error loading students:", err); }
+        }
+
+        // 2. POST & PUT: Save or Update Student
+        async function handleSave() {
+            const id = document.getElementById('studentId').value;
+            const studentData = {
+                name: document.getElementById('studentName').value,
+                age: document.getElementById('studentAge').value,
+                rollNo: document.getElementById('studentRoll').value,
+                phone: document.getElementById('studentPhone').value,
+                email: document.getElementById('studentEmail').value,
+                address: document.getElementById('studentAddress').value
+            };
+
+            // Determine if we are adding or updating
+            const url = id ? `${BASE_URL}/update-student/${id}` : `${BASE_URL}/add-students`;
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(studentData)
+                });
+
+                if (response.ok) {
+                    alert(id ? "Student updated!" : "Student added!");
+                    closeModal();
+                    fetchStudentData(); // Refresh the table
+                } else {
+                    alert("Error saving data");
+                }
+            } catch (err) { console.error("Save error:", err); }
+        }
+
+        // 3. DELETE: Remove Student
+        async function deleteStudent(id) {
+            if (confirm("Are you sure you want to delete this record?")) {
+                try {
+                    const response = await fetch(`${BASE_URL}/delete-student/${id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        alert("Student deleted successfully");
+                        fetchStudentData(); // Refresh the table
+                    }
+                } catch (err) { console.error("Delete error:", err); }
+            }
+        }
+
+        // Modal management functions (keep these as they were)
+        function openAddModal() {
+            document.getElementById('modalTitle').innerText = "Add New Student";
+            document.getElementById('studentId').value = ""; 
+            clearForm();
+            document.getElementById('studentModal').style.display = 'block';
+        }
+
+        function openEditModal(student) {
+            document.getElementById('modalTitle').innerText = "Update Student";
+            document.getElementById('studentId').value = student._id;
+            document.getElementById('studentName').value = student.name;
+            document.getElementById('studentAge').value = student.age;
+            document.getElementById('studentRoll').value = student.rollNo;
+            document.getElementById('studentPhone').value = student.phone;
+            document.getElementById('studentEmail').value = student.email;
+            document.getElementById('studentAddress').value = student.address;
+            document.getElementById('studentModal').style.display = 'block';
+        }
+
+        function closeModal() { document.getElementById('studentModal').style.display = 'none'; }
+        function clearForm() {
+            ['studentName', 'studentAge', 'studentRoll', 'studentPhone', 'studentEmail', 'studentAddress'].forEach(id => {
+                document.getElementById(id).value = "";
+            });
+        }
+
+        window.onload = fetchStudentData;
+
+    </script>
+</body>
+</html>
