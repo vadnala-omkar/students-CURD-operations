@@ -26,6 +26,7 @@ const getStudents = async(req, res)=>{
 }
 
 //get single student by id
+
 const getStudentById = async(req, res)=>{
     try{
         const rollNo = req.params.id;
@@ -76,4 +77,3 @@ const deleteStudentById = async(req, res)=>{
     }
 }
 module.exports = {createStudent, getStudents, getStudentById, updateStudentById, deleteStudentById}
-
